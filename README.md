@@ -1,52 +1,79 @@
 # vibe-friends
 
-`/vibe-friends` slash command for Claude Code, Codex CLI, Cursor, and Windsurf — peek at the latest posts from **Vibe Friends**, the community built by [VibeCafé](https://vibecafe.ai), right from your AI coding tool.
+`/vibe-friends` slash command + optional statusline ticker for Claude Code — peek at the latest posts from **Vibe Friends**, the community built by [VibeCafé](https://vibecafe.ai), right from your AI coding tool.
 
 ## Install
 
 ```bash
-npx @vibe-cafe/vibe-friends
+npx @vibe-cafe/vibe-friends                  # active: install /vibe-friends skill
+npx @vibe-cafe/vibe-friends statusline       # passive: footer one-liner ticker (Claude Code)
 ```
 
-That's it. The installer:
-1. Detects which AI coding tools you have (Claude Code / Codex CLI / Cursor / Windsurf)
-2. Writes a `SKILL.md` to each tool's skills directory
+No account, no API key, no setup. Calls a public read-only endpoint on vibecafe.ai.
 
-Then type `/vibe-friends` inside any of those tools to see the top posts.
+## Active — `/vibe-friends`
 
-No account, no API key, no setup. The skill calls a public read-only endpoint on vibecafe.ai.
-
-## What you see
+Type `/vibe-friends` inside Claude Code. The skill runs `vibe-friends view`, which opens a full-screen TUI overlay (alt-screen buffer — doesn't pollute your main conversation):
 
 ```
-# Vibe Friends 社区热帖
-
-1. **[Claude Code 用了一个月，每天 30 刀…](https://vibecafe.ai/item/abc123)** — @duck4money · 42 赞 · 12 评论
-2. **[Codex 5 hour cap 还有人在用吗](https://vibecafe.ai/item/def456)** — @other · 31 赞 · 8 评论
-...
-
-来 Vibe Friends 社区参与讨论: https://vibecafe.ai
+┌─ Vibe Friends — Top 10 ─────────────────────────────────────┐
+│                                                              │
+│ ▸ 1. Claude Code 用了一个月，每天 30 刀…       @duck4money    │
+│      ↑ 42 · 💬 12 · 2h                                       │
+│                                                              │
+│   2. Codex 5 hour cap 还有人在用吗                  @other    │
+│      ↑ 31 · 💬 8 · 4h                                        │
+│   ...                                                         │
+│                                                              │
+├──────────────────────────────────────────────────────────────┤
+│ ↑↓ 移动   Enter 打开   r 刷新   q/ESC 退出                   │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-Click any link to open the post in your browser — that's where you vote, comment, and reply.
+- `↑↓` move highlight, `Enter` opens the post in your browser, `r` reload, `q` / `ESC` exit
+- On exit your Claude session resumes — the conversation only gains one line: `[vibe-friends] 浏览了 N 条帖子，已退出`
+- Outside a TTY (CI, piped stdout) it falls back to a plain markdown list automatically
 
-## Want to peek without polluting your AI session?
+Codex CLI / Cursor / Windsurf get the markdown-list fallback (their TUI environment doesn't restore cleanly from an overlay).
 
-`/vibe-friends` runs inside your Claude Code / Codex conversation, so the output becomes part of the chat history and counts toward context.
+## Passive — statusline footer ticker
 
-If you'd rather glance at the feed *without* interrupting whatever you're asking the AI to do, two options:
-
-- **Open a second terminal pane / tmux split** and just run `npx @vibe-cafe/vibe-friends list` there. Zero context cost.
-- **Claude Code only** — use the `!` prefix in the input box: `!npx @vibe-cafe/vibe-friends list` runs the shell command directly without invoking the model. No tokens spent, no message in history.
-
-## Other commands
+If you'd rather just glance at the feed while you work, install the statusline:
 
 ```bash
-npx @vibe-cafe/vibe-friends                  # Install the skill
-npx @vibe-cafe/vibe-friends list             # Print the top 10 as markdown
-npx @vibe-cafe/vibe-friends list --sort new  # Latest instead of top
-npx @vibe-cafe/vibe-friends list --limit 20  # Show more (max 30)
+npx @vibe-cafe/vibe-friends statusline
+```
+
+This wires `vbf-statusline` into `~/.claude/settings.json` → `statusLine.command`. After Claude Code reloads its config, the footer shows one rotating post per turn:
+
+```
+▸ Vibe Friends · Claude Code 用了一个月，每天 30 刀… — @duck4money
+```
+
+- Cycles through Top 10 — one post per Claude turn
+- Cache refreshes in the background every 5 minutes
+- Terminals that support OSC 8 (iTerm2, Warp, VSCode, Kitty) render the line as a clickable hyperlink
+- Chains with an existing `statusLine.command` (claude-hud, vibe-usage-statusline.sh, your own script) — the original output is preserved above Vibe Friends' line. Your original `settings.json` is backed up to `~/.claude/settings.json.vbf-backup`.
+
+Remove it:
+
+```bash
+npx @vibe-cafe/vibe-friends statusline --remove
+```
+
+This restores the original `statusLine.command` from the chain wrapper. The backup file stays put so you can sanity-check before deleting.
+
+## All commands
+
+```bash
+npx @vibe-cafe/vibe-friends                  # Install /vibe-friends skill
+npx @vibe-cafe/vibe-friends view             # Open the TUI directly
+npx @vibe-cafe/vibe-friends list             # Markdown list (CI / fallback)
+npx @vibe-cafe/vibe-friends list --sort new  # Newest instead of top
+npx @vibe-cafe/vibe-friends list --limit 20  # Up to 30
 npx @vibe-cafe/vibe-friends --remove         # Uninstall the skill
+npx @vibe-cafe/vibe-friends statusline           # Wire footer ticker
+npx @vibe-cafe/vibe-friends statusline --remove  # Unwire footer ticker
 npx @vibe-cafe/vibe-friends help             # Show help
 ```
 
@@ -64,8 +91,9 @@ Posts marked as $999 Club–only show a placeholder title (`[$999 Club 会员专
 
 ## Roadmap (not yet)
 
-- **Statusline mode** for Claude Code — a one-liner ("最热: …") in the status bar so you can glance at it without typing anything. Only viable in Claude Code (Codex / Cursor have no statusline extension point). Holding off until we hear whether people actually want it.
-- **Vibe Usage app tab** — surfacing the feed in the [vibe-usage Mac app](https://github.com/vibe-cafe/vibe-usage-app)'s menu-bar popover, which is the most "always visible" UX possible. Tracking separately.
+- **Codex CLI statusline** — Codex's statusline currently only renders built-in items, no custom `command` shell-out. Holding until upstream adds it.
+- **Codex CLI TUI overlay** — Codex's TUI doesn't restore cleanly from an alt-screen child process today, so `view` falls back to markdown. Revisit if upstream improves child-TTY handoff.
+- **Vibe Usage app tab** — surfacing the feed in the [vibe-usage Mac app](https://github.com/vibe-cafe/vibe-usage-app)'s menu-bar popover, the most "always visible" UX possible. Tracked separately.
 
 ## Related
 

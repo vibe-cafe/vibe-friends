@@ -2,6 +2,10 @@
 
 import { runInstall } from '../src/install.js';
 import { runList } from '../src/list.js';
+import { runView } from '../src/view.js';
+import { runStatuslineInstall } from '../src/statusline-install.js';
+import { runStatusline } from '../src/statusline.js';
+import { runRefreshCache } from '../src/refresh-cache.js';
 
 function extractOption(args, name) {
   const flag = `--${name}`;
@@ -17,17 +21,24 @@ function extractOption(args, name) {
 
 function printHelp() {
   console.log(`
-  vibe-friends — Vibe Friends 社区 (VibeCafé) 的 /vibe-friends skill
+  vibe-friends — Vibe Friends 社区 (VibeCafé) 的 /vibe-friends skill + statusline
 
-  Usage:
-    npx @vibe-cafe/vibe-friends                  Install the skill for detected AI tools
-    npx @vibe-cafe/vibe-friends list             Print the top posts as markdown
-    npx @vibe-cafe/vibe-friends list --sort new  Latest posts (default: top)
-    npx @vibe-cafe/vibe-friends list --limit 20  Show N posts (default: 10, max: 30)
+  Skill (主动 TUI):
+    npx @vibe-cafe/vibe-friends                  Install /vibe-friends skill
+    npx @vibe-cafe/vibe-friends view             Open the TUI (used by the skill)
+    npx @vibe-cafe/vibe-friends list             Print posts as markdown (CI / fallback)
     npx @vibe-cafe/vibe-friends --remove         Uninstall the skill
-    npx @vibe-cafe/vibe-friends help             Show this help
 
-  Once installed, type /vibe-friends inside Claude Code / Codex CLI / Cursor / Windsurf.
+  Statusline (被动 footer 一行):
+    npx @vibe-cafe/vibe-friends statusline           Wire vbf-statusline into ~/.claude/settings.json
+    npx @vibe-cafe/vibe-friends statusline --remove  Remove and restore the original
+
+  Once installed, type /vibe-friends inside Claude Code (Codex CLI / Cursor / Windsurf
+  still get the markdown-list fallback).
+
+  Misc:
+    --sort new   Sort by newest instead of top
+    --limit N    Show N posts (default 10, max 30)
 `);
 }
 
@@ -37,6 +48,19 @@ async function main() {
 
   if (command === 'help' || rawArgs.includes('--help') || rawArgs.includes('-h')) {
     printHelp();
+    return;
+  }
+
+  if (command === 'view') {
+    let stripped = rawArgs.slice(1);
+    let sort;
+    let limit;
+    ({ args: stripped, value: sort } = extractOption(stripped, 'sort'));
+    ({ args: stripped, value: limit } = extractOption(stripped, 'limit'));
+    await runView({
+      sort: sort === 'new' ? 'new' : 'top',
+      limit: limit ? Math.min(parseInt(limit, 10) || 10, 30) : 10,
+    });
     return;
   }
 
@@ -53,7 +77,24 @@ async function main() {
     return;
   }
 
-  // Default + --remove → install flow
+  if (command === 'statusline') {
+    const remove = rawArgs.includes('--remove');
+    runStatuslineInstall({ remove });
+    return;
+  }
+
+  // Internal — invoked by Claude Code's statusLine.command and by background refresh
+  if (command === 'statusline-render') {
+    await runStatusline();
+    return;
+  }
+
+  if (command === 'refresh-cache') {
+    await runRefreshCache();
+    return;
+  }
+
+  // Default + --remove → install skill flow
   const remove = rawArgs.includes('--remove');
   runInstall({ remove });
 }
