@@ -1,0 +1,34 @@
+{
+  "name": "@vibe-cafe/vibe-friends",
+  "version": "0.1.0",
+  "description": "/vibe-friends slash command for Claude Code / Codex CLI / Cursor / Windsurf — show the latest posts from Vibe Friends, VibeCafé's community.",
+  "type": "module",
+  "bin": {
+    "vibe-friends": "bin/vibe-friends.js"
+  },
+  "files": [
+    "bin/",
+    "src/"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "vibe-cafe",
+    "claude-code",
+    "codex",
+    "skill",
+    "slash-command",
+    "community"
+  ],
+  "dependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vibe-cafe/vibe-friends.git"
+  },
+  "homepage": "https://github.com/vibe-cafe/vibe-friends#readme",
+  "bugs": {
+    "url": "https://github.com/vibe-cafe/vibe-friends/issues"
+  },
+  "license": "MIT"
+}
