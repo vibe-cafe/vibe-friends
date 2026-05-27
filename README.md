@@ -50,7 +50,7 @@ This wires `vbf-statusline` into `~/.claude/settings.json` → `statusLine.comma
 ▸ Vibe Friends · Claude Code 用了一个月，每天 30 刀… — @duck4money
 ```
 
-- Cycles through Top 10 — one post per Claude turn
+- Cycles through Top 10 — rotates to the next post every 30 seconds (stays put on faster turn boundaries so it doesn't flicker)
 - Cache refreshes in the background every 5 minutes
 - Terminals that support OSC 8 (iTerm2, Warp, VSCode, Kitty) render the line as a clickable hyperlink
 - Chains with an existing `statusLine.command` (claude-hud, vibe-usage-statusline.sh, your own script) — the original output is preserved above Vibe Friends' line. Your original `settings.json` is backed up to `~/.claude/settings.json.vbf-backup`.

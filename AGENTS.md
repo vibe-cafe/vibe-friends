@@ -71,7 +71,7 @@ Response:
 At each Claude turn boundary, `statusline.js`:
 1. Drains stdin (Claude pipes session JSON)
 2. Pipes that stdin to `wrap-prev.sh` if it exists, prints its stdout
-3. Reads `~/.vibe-friends/cache.json`, advances `lastIndex`, prints one line for the next post
+3. Reads `~/.vibe-friends/cache.json`. If `now - lastRotatedAt >= 30s` (or it's the first render), advances `lastIndex` and updates `lastRotatedAt`; otherwise re-renders the current post without writing the cache. This keeps the line steady on fast turn boundaries — Claude Code reruns the statusline on every message / tool call / token update, which used to flip the post several times per second.
 4. If cache is stale (>5min) **fires off `vbf refresh-cache` detached** — never blocks the statusline render
 
 `--remove` reads `wrap-prev.sh`, extracts the `exec` target, restores it to `settings.json.statusLine.command`, deletes the wrap script. The `.vbf-backup` file stays in place as a safety net.

@@ -7,6 +7,7 @@ import { readCache, writeCache, cachePath } from './refresh-cache.js';
 const VBF_DIR = join(homedir(), '.vibe-friends');
 const WRAP_PREV = join(VBF_DIR, 'wrap-prev.sh');
 const CACHE_TTL_MS = 5 * 60 * 1000;
+const ROTATE_INTERVAL_MS = 30 * 1000;
 
 const RESET = '\x1b[0m';
 const DIM = '\x1b[2m';
@@ -74,10 +75,19 @@ export async function runStatusline() {
     return;
   }
 
-  const nextIndex = (Number(cache.lastIndex ?? -1) + 1) % cache.posts.length;
-  writeCache({ ...cache, lastIndex: nextIndex });
+  const lastIndex = Number(cache.lastIndex ?? -1);
+  const lastRotatedAt = Number(cache.lastRotatedAt ?? 0);
+  const shouldRotate = lastIndex < 0 || now - lastRotatedAt >= ROTATE_INTERVAL_MS;
 
-  const post = cache.posts[nextIndex];
+  const currentIndex = shouldRotate
+    ? (lastIndex + 1) % cache.posts.length
+    : lastIndex % cache.posts.length;
+
+  if (shouldRotate) {
+    writeCache({ ...cache, lastIndex: currentIndex, lastRotatedAt: now });
+  }
+
+  const post = cache.posts[currentIndex];
   const handle = post.author?.handle ? `@${post.author.handle}` : '匿名';
   const title = String(post.title || '').slice(0, 80);
   const label = `${CYAN}▸ Vibe Friends${RESET} · ${title} ${DIM}— ${handle}${RESET}`;
