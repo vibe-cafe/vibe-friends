@@ -28,6 +28,7 @@ export async function runRefreshCache() {
     const posts = await fetchPosts({ limit: 10, sort: 'top' });
     const prev = readCache();
     writeCache({
+      ...(prev || {}),
       posts,
       fetchedAt: Date.now(),
       lastIndex: prev?.lastIndex ?? -1,

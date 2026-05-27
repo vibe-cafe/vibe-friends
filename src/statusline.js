@@ -30,11 +30,17 @@ function readStdinSync() {
 
 function passThroughToPrevWrapper(stdinData) {
   if (!existsSync(WRAP_PREV)) return '';
+  // Guard against recursion: if a previous statusline (e.g. vibe-usage) was
+  // installed *after* us and chained back to vibe-friends statusline-render,
+  // running wrap-prev would re-enter this process forever. The env var below
+  // is set before we exec the previous wrapper and inherited by descendants.
+  if (process.env.VIBE_FRIENDS_STATUSLINE_IN_PREV === '1') return '';
   try {
     const result = spawnSync('sh', [WRAP_PREV], {
       input: stdinData,
       encoding: 'utf-8',
       timeout: 2000,
+      env: { ...process.env, VIBE_FRIENDS_STATUSLINE_IN_PREV: '1' },
     });
     return result.stdout || '';
   } catch {
@@ -57,6 +63,10 @@ function triggerBackgroundRefresh() {
 }
 
 export async function runStatusline() {
+  // If we were invoked as part of a chained previous-statusline (cycle),
+  // produce nothing — the outer invocation already rendered our line.
+  if (process.env.VIBE_FRIENDS_STATUSLINE_IN_PREV === '1') return;
+
   const stdinData = readStdinSync();
   const prevOutput = passThroughToPrevWrapper(stdinData);
 
