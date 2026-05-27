@@ -1,6 +1,6 @@
 {
   "name": "@vibe-cafe/vibe-friends",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "/vibe-friends slash command for Claude Code / Codex CLI / Cursor / Windsurf — show the latest posts from Vibe Friends, VibeCafé's community.",
   "type": "module",
   "bin": {
