@@ -1,11 +1,7 @@
-import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { homedir } from 'node:os';
+import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { readCache, writeCache, cachePath } from './refresh-cache.js';
 
-const VBF_DIR = join(homedir(), '.vibe-friends');
-const WRAP_PREV = join(VBF_DIR, 'wrap-prev.sh');
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const ROTATE_INTERVAL_MS = 30 * 1000;
 
@@ -14,38 +10,15 @@ const DIM = '\x1b[2m';
 const CYAN = '\x1b[36m';
 
 function osc8(url, label) {
-  // OSC 8 hyperlink. Terminals that don't support it just see the label.
   return `\x1b]8;;${url}\x1b\\${label}\x1b]8;;\x1b\\`;
 }
 
-function readStdinSync() {
-  // Claude Code pipes session JSON in. Drain so we can pass it through.
+function drainStdin() {
+  // Claude Code pipes session JSON in. We don't need it, but drain so the
+  // upstream writer doesn't see a broken pipe.
   try {
-    if (process.stdin.isTTY) return '';
-    return readFileSync(0, 'utf-8');
-  } catch {
-    return '';
-  }
-}
-
-function passThroughToPrevWrapper(stdinData) {
-  if (!existsSync(WRAP_PREV)) return '';
-  // Guard against recursion: if a previous statusline (e.g. vibe-usage) was
-  // installed *after* us and chained back to vibe-friends statusline-render,
-  // running wrap-prev would re-enter this process forever. The env var below
-  // is set before we exec the previous wrapper and inherited by descendants.
-  if (process.env.VIBE_FRIENDS_STATUSLINE_IN_PREV === '1') return '';
-  try {
-    const result = spawnSync('sh', [WRAP_PREV], {
-      input: stdinData,
-      encoding: 'utf-8',
-      timeout: 2000,
-      env: { ...process.env, VIBE_FRIENDS_STATUSLINE_IN_PREV: '1' },
-    });
-    return result.stdout || '';
-  } catch {
-    return '';
-  }
+    if (!process.stdin.isTTY) readFileSync(0, 'utf-8');
+  } catch {}
 }
 
 function triggerBackgroundRefresh() {
@@ -63,16 +36,7 @@ function triggerBackgroundRefresh() {
 }
 
 export async function runStatusline() {
-  // If we were invoked as part of a chained previous-statusline (cycle),
-  // produce nothing — the outer invocation already rendered our line.
-  if (process.env.VIBE_FRIENDS_STATUSLINE_IN_PREV === '1') return;
-
-  const stdinData = readStdinSync();
-  const prevOutput = passThroughToPrevWrapper(stdinData);
-
-  if (prevOutput) {
-    process.stdout.write(prevOutput.endsWith('\n') ? prevOutput : prevOutput + '\n');
-  }
+  drainStdin();
 
   const cache = readCache();
   const now = Date.now();
